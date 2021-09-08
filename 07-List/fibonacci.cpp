@@ -1,0 +1,236 @@
+/***********************************************************************
+ * Implementation:
+ *    FIBONACCI
+ * Summary:
+ *    This will contain the implementation for fibonacci() as well as any
+ *    other function or class implementations you may need
+ * Author
+ *    Klevin Doda
+ **********************************************************************/
+
+#include <iostream>
+#include <vector>
+#include <iomanip>
+#include "fibonacci.h"   // for fibonacci() prototype
+#include "list.h"        // for LIST
+using namespace std;
+
+const int DIVISOR = 1000;
+
+/************************************************
+ * Non-default constructor
+ ***********************************************/
+WholeNumber :: WholeNumber(unsigned int number)
+{
+    parseNumber(number);
+}
+
+/************************************************
+ * Copy Constructor
+ ***********************************************/
+WholeNumber :: WholeNumber(const WholeNumber& rhs)
+{
+    this->parts = rhs.parts;
+}
+
+/************************************************
+ * Assignment operator
+ * rhs is a unsigned int
+ ***********************************************/
+WholeNumber& WholeNumber :: operator = (unsigned int number) throw (const char *)
+{
+    this->parts.clear();
+    parseNumber(number);
+    return *this;
+}
+
+/************************************************
+ * Assignment operator
+ * rhs is a WholeNumber
+ ***********************************************/
+WholeNumber& WholeNumber :: operator = (const WholeNumber& rhs) throw (const char *)
+{
+    this->parts = rhs.parts;
+    return *this;
+}
+
+/************************************************
+ * += operator
+ * Sum this whole number with the rhs
+ ***********************************************/
+WholeNumber& WholeNumber :: operator += (const WholeNumber& rhs) throw (const char *)
+{
+    short carry = 0;
+
+    for(ListIterator<short> thisIt = this->parts.rbegin(), rhsIt  = rhs.parts.rbegin();
+        thisIt != this->parts.rend() || rhsIt != rhs.parts.rend();
+        --thisIt, --rhsIt)
+    {
+        short sum  =   (thisIt == this->parts.rend() ? 0 : *thisIt)
+                       + (rhsIt  == rhs.parts.rend()   ? 0 : *rhsIt)
+                       + carry;
+
+        short part  = sum % DIVISOR;
+        carry = sum / DIVISOR;
+
+        if(thisIt == this->parts.rend()) //if in the end add a new node
+            this->parts.push_front(part); //only three digits
+        else
+            *thisIt = part;
+    }
+
+    if(carry)
+        this->parts.push_front(carry);
+
+    return *this;
+}
+
+/************************************************
+ * + operator
+ * Sum two whole numbers together
+ ***********************************************/
+WholeNumber WholeNumber :: operator + (const WholeNumber& rhs) throw (const char *)
+{
+    WholeNumber temp;
+    ListIterator<short> thisIt = this->parts.rbegin();
+    ListIterator<short> rhsIt  = rhs.parts.rbegin();
+    short carry = 0;
+
+    while(thisIt != this->parts.rend() || rhsIt != rhs.parts.rend())
+    {
+        short sum  =   (thisIt == this->parts.rend() ? 0 : *(thisIt--))
+                       + (rhsIt  == rhs.parts.rend()   ? 0 : *(rhsIt--))
+                       + carry;
+
+        short part  = sum % DIVISOR;
+        carry = sum / DIVISOR;
+        temp.parts.push_front(part); //only three digits
+    }
+
+    if(carry)
+        temp.parts.push_front(carry);
+
+    return temp;
+}
+
+
+/************************************************
+ * << operator
+ * Using cout with Whole number
+ ***********************************************/
+std::ostream& operator << (std::ostream& os, const WholeNumber& rhs)
+{
+    ListIterator<short> it = rhs.parts.begin();
+    os << *it;
+    while(++it != rhs.parts.end())
+        os << "," << setfill('0') << setw(3) << *it;
+
+    return os;
+}
+
+/************************************************
+ * Parse last three digits
+ * Parse the last three digits of the number
+ * and return them
+ ***********************************************/
+short WholeNumber :: parseLast3Digits(unsigned int &number)
+{
+    short part = 0;
+    int x = 1;
+    for(int i = 0; number && i < 3;++i)
+    {
+        part += (number%10) * x;
+        x *= 10;
+        number /= 10;
+    }
+    return part;
+}
+
+/************************************************
+ * Parse number
+ * Parse the number into DLL
+ ***********************************************/
+void WholeNumber :: parseNumber(unsigned int number)
+{
+    while(number)
+        parts.push_front(
+                parseLast3Digits(number)
+        );
+}
+
+/************************************************
+ * Display Fibonacci Number
+ * Display the nth Fibonacci Number
+ ***********************************************/
+void displayFibonacciNumber(int number)
+{
+    //checking the special case here since I don't want to use if statement
+    //over and over again in the loop
+    if(number == 1 || number == 2)
+    {
+        cout << "\t" << 1 << endl;
+    }
+    else
+    {
+        WholeNumber fib1 = 1;
+        WholeNumber fib2 = 1;
+        WholeNumber fibNext;
+
+        for(int i = 3;i <= number;++i)
+        {
+            fibNext = fib1 + fib2;
+            fib1.swap(fib2);
+            fib2.swap(fibNext);
+        }
+
+        cout << "\t" << fib2 << endl;
+    }
+}
+
+/************************************************
+ * Display Fibonacci Numbers
+ * Display theFibonacci Numbers until the nth one
+ ***********************************************/
+void displayFibonacciNumbers(int number)
+{
+    WholeNumber fib1 = 1;
+    WholeNumber fib2 = 1;
+    WholeNumber fibNext;
+
+    //checking the special case here since I don't want to use if statement
+    //over and over again in the loop
+    if(number >= 1)
+        cout << "\t" << 1 << endl;
+    if(number >= 2)
+        cout << "\t" << 1 << endl;
+    for(int i = 3;i <= number;++i)
+    {
+        fibNext = fib1 + fib2;
+        cout << "\t" << fibNext << endl;
+        fib1.swap(fib2);
+        fib2.swap(fibNext);
+    }
+}
+
+/************************************************
+ * FIBONACCI
+ * The interactive function allowing the user to
+ * display Fibonacci numbers
+ ***********************************************/
+void fibonacci()
+{
+    // show the first serveral Fibonacci numbers
+    int number;
+    cout << "How many Fibonacci numbers would you like to see? ";
+    cin  >> number;
+
+    // TODO solve this in  O(logn) for fun using Eigen vectors
+    displayFibonacciNumbers(number);
+
+    // prompt for a single large Fibonacci
+    cout << "Which Fibonacci number would you like to display? ";
+    cin  >> number;
+
+    // your code to display the <number>th Fibonacci number
+    displayFibonacciNumber(number);
+}

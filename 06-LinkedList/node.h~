@@ -1,0 +1,130 @@
+#ifndef NODE_H
+#define NODE_H
+
+#include <stdio.h>
+#include <iostream>
+#include <cassert>
+
+/************************************************
+ * NODE
+ * A class that represents a node of Linked-List
+ ***********************************************/
+template <class T>
+class Node
+{
+public:
+    Node() : pNext(NULL) {}
+    Node(T data) : data(data), pNext(NULL) { }
+    Node(T data, Node* pNext ) : data(data), pNext(pNext) { }
+    
+    friend std::ostream& operator<< (std::ostream& os, Node* pHead)
+    {
+        if(!pHead)
+        {
+            while(pHead->pNext)
+            {
+                os << pHead->data << ", ";
+                pHead = pHead->pNext;
+            }
+            os << pHead->data;
+        }
+        
+        return os;
+    }
+    
+    T data;
+    Node* pNext;
+};
+
+//template <class T>
+//std::ostream& operator<< (std::ostream& os, Node<T>* pHead)
+//{
+//    if(!pHead)
+//    {
+//        while(pHead->pNext)
+//        {
+//            os << pHead->data << ", ";
+//            pHead = pHead->pNext;
+//        }
+//        os << pHead->data;
+//    }
+//
+//    return os;
+//}
+//template <class T>
+//void insert(const T & t,
+//            Node<T> *& pHead,
+//            bool head = false)
+//{
+//    Node<T> *newNode = new Node<T>(t,pHead ? pHead->pNext : pHead);
+//    if(!pHead || head)
+//        pHead = newNode;
+//    else
+//        pHead->pNext = newNode;
+//}
+
+
+template <class T>
+void insert(const T & t,
+            Node<T> *& pHead,
+            bool head = false)
+{
+    Node<T> *newNode = new Node<T>(t);
+    if(!pHead)
+    {
+        newNode->pNext = pHead;
+        pHead = newNode;
+    }
+    else if(head)
+    {
+        newNode->pNext = pHead;
+        pHead = newNode;
+    }
+    else
+    {
+        newNode->pNext = pHead->pNext;
+        pHead->pNext = newNode;
+    }
+}
+
+template <class T>
+Node<T>* copy(Node<T> *pHead)
+{
+    if(!pHead) return NULL;
+    
+    Node<T> *pHeadCopy = new Node<T>(pHead->data);
+    Node<T> *pCrawl = pHeadCopy;
+    pHead = pHead->pNext;
+    
+    while(pHead)
+    {
+        pCrawl->pNext = new Node<T>(pHead->data);
+        pHead = pHead->pNext;
+        pCrawl = pCrawl->pNext;
+    }
+    return pHeadCopy;
+}
+
+template <class T>
+void freeData(Node<T> *&pHead)
+{
+    //works even when pHead is NULL no need to check
+    Node<T> *prevHead = pHead;
+    while(pHead)
+    {
+        pHead = pHead->pNext;
+        delete prevHead;
+        prevHead = pHead;
+    }
+    pHead = NULL;
+}
+
+//TODO
+template <class T>
+Node<T>* find(Node<T> *pHead, T t)
+{
+    return NULL;
+}
+
+#endif
+

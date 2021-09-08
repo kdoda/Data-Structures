@@ -1,0 +1,240 @@
+#ifndef QUEUE_H
+#define QUEUE_H
+
+#include <stdio.h>
+#include <cassert>
+
+/************************************************
+ * QUEUE
+ * A class represeting ADT Queue
+ ***********************************************/
+template <class T>
+class Queue
+{
+public:
+    // default constructor : empty and kinda useless
+    Queue() : numPush(0), numPop(0), numCapacity(0), data(NULL) {}
+    
+    // non-default constructor : pre-allocate
+    Queue(int numCapacity) throw (const char *);
+    
+    // copy constructor : copy it
+    Queue(const Queue & rhs) throw (const char *);
+    
+    // destructor : free everything
+    ~Queue() { delete[] data; }
+    
+    //assignment operator
+    Queue & operator = (const Queue & rhs) throw (const char *);
+
+    // is the container currently empty
+    bool empty() const { return !size(); }
+
+    // what is the capacity
+    int capacity() const { return numCapacity; }
+
+    // remove all the items from the queue
+    void clear() { numPush = numPop = 0; }
+
+    // how many items are currently in the queue
+    int size() const { return numPush - numPop; }
+    
+    // can you give me the index of the tail please?
+    int iTail() const { return (numPush - 1) % numCapacity; }
+    
+    // can you give me the index of the head please?
+    int iHead() const { return numPop % numCapacity; }
+
+    // pop from the front
+    void pop() throw (const char *);
+    
+    // add an item to the queue, reallocate if needed
+    void push(const T & t) throw (const char *);
+    
+    //get and set the front element
+    T& front() throw (const char *);
+    
+    //get and set the back element
+    T& back() throw (const char *);
+    
+private:
+    int numPush;     // how many pushs
+    int numPop;      // how many pops
+    int numCapacity;
+    T * data;        // dynamically allocated array of T
+    
+    void reallocate(int numCapacity) throw (const char *);
+    void setDefault(int = 0);
+    void copy(const Queue<T> & rhs) throw (const char *);
+    bool isFull() { return size() == capacity(); }
+};
+
+/************************************************
+ * QUEUE :: SET DEFAULT
+ * Set the properties to default values.
+ ***********************************************/
+template <class T>
+void Queue<T> :: setDefault(int numCapacity)
+{
+    this->numCapacity = numCapacity;
+    numPop = numPush = 0;
+    delete []data;
+    data = NULL;
+}
+
+/************************************************
+ * QUEUE ::  NON DEFAULT CONSTRUCTOR
+ ***********************************************/
+template <class T>
+Queue<T> :: Queue(int numCapacity) throw (const char *)
+{
+    assert(numCapacity >= 0);
+    setDefault(numCapacity);
+    if (numCapacity == 0)
+        return;
+    
+    data = new (std::nothrow) T[numCapacity];
+    if(!data)
+        throw "ERROR: Unable to allocate a new buffer for queue";
+}
+
+/*******************************************
+ * QUEUE :: COPY CONSTRUCTOR
+ *******************************************/
+template <class T>
+Queue <T> :: Queue(const Queue <T> & rhs) throw (const char *)
+{
+    assert(rhs.numCapacity >= 0);
+    setDefault();
+    // do nothing if there is nothing to do
+    if (rhs.numCapacity == 0)
+        return;
+    
+   copy(rhs);
+}
+
+/**********************************************
+ * QUEUE : ASSIGNMENT
+ **********************************************/
+template <class T>
+Queue<T> & Queue <T> :: operator = (const Queue<T> & rhs) throw (const char *)
+{
+    assert(rhs.capacity() >= 0);
+    if(this == &rhs) return *this;
+    // do nothing if there is nothing to do
+    if (rhs.capacity() == 0)
+    {
+        setDefault(); //deletes the allocated array
+        return *this;
+    }    
+    copy(rhs);
+    return *this;
+}
+
+/**********************************************
+ * QUEUE : COPY the rest of the array
+ **********************************************/
+template <class T>
+void Queue <T> :: copy(const Queue<T> & rhs) throw (const char *)
+{
+    numPush = numPop = 0;
+    if(numCapacity < rhs.size()) //allocate a new one only if we need one
+    {
+        delete []data; //delete the exisiting array if any
+        
+        numCapacity = rhs.size();
+        // attempt to allocate
+        data = new (std::nothrow) T[numCapacity]; //the size not the capacity!
+        if (!data)
+            throw "ERROR: Unable to allocate a new buffer for Queue";
+    }
+    
+    // copy over and size
+    assert(rhs.size() >= 0 && rhs.size() <= rhs.capacity());
+    
+    // copy the items over one at a time using the assignment operator
+    for (int i = rhs.numPop; i < rhs.numPush; ++i)
+        this->push(rhs.data[i % rhs.numCapacity]);
+
+}
+
+/**********************************************
+ * QUEUE : REALLOCATE
+ * Reallocate to the new capacity
+ **********************************************/
+template <class T>
+void Queue <T> :: reallocate(int numCapacity) throw (const char *)
+{
+    int oldNumPush = numPush;
+    int oldNumPop = numPop;
+    numPush = numPop = 0;
+    T * newData = new (std::nothrow) T[numCapacity];
+    if (!newData)
+        throw "ERROR: Unable to allocate a new buffer for queue";
+    
+    for (int i = oldNumPop, j = 0; i < oldNumPush; ++i, ++j)
+    {
+        ++numPush;
+        newData[j] = data[i % this->numCapacity]; //or i - oldNumPop instead of j
+    }
+        
+    this->numCapacity = numCapacity;
+    delete[]data; //free memory
+    data = newData;
+}
+
+/**********************************************
+ * QUEUE : PUSH
+ * Push to the end of the queue
+ **********************************************/
+template <class T>
+void Queue <T> :: push(const T & t) throw (const char *)
+{
+    if(isFull())
+        reallocate(numCapacity ? numCapacity * 2 : 1);
+    
+    numPush++;
+    data[iTail()] = t;
+}
+
+
+/**********************************************
+ * QUEUE : POP
+ * Pop from the front of the queue
+ **********************************************/
+template <class T>
+void Queue <T> :: pop() throw (const char *)
+{
+    if(empty())
+        throw "ERROR: attempting to pop from an empty queue";
+    
+    numPop++;
+}
+
+/**********************************************
+ * QUEUE : FRONT
+ * Get Set the front value of the queue
+ **********************************************/
+template <class T>
+T& Queue <T> :: front() throw (const char *)
+{
+    if(empty())
+        throw "ERROR: attempting to access an item in an empty queue";
+    
+    return data[iHead()];
+}
+
+/**********************************************
+ * QUEUE : BACK
+ * Get Set the back value of the queue
+ **********************************************/
+template <class T>
+T& Queue <T> :: back() throw (const char *)
+{
+    if(empty())
+        throw "ERROR: attempting to access an item in an empty queue";
+    
+    return data[iTail()];
+}
+
+#endif

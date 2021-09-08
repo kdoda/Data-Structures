@@ -1,0 +1,113 @@
+/***********************************************************************
+* Program:
+*    Week 11, Sorting
+*    Brother Ercanbrack, CS 235
+*
+* Author:
+*   <Your Name>   
+* Summary: 
+*
+************************************************************************/
+#include <list>
+#include <fstream>
+
+using namespace std;
+
+typedef list<int>::iterator listIterator;
+
+void merge(listIterator iBegin1, listIterator iBegin2, listIterator
+	iEnd1, listIterator iEnd2)
+{
+	listIterator head = iBegin1;
+	list<int> temp;
+
+
+	while (iBegin1 != iEnd1 && iBegin2 != iEnd2)
+	{
+		if (*iBegin1 < *iBegin2)
+			temp.push_back(*(iBegin1++)); //post increment
+		else
+			temp.push_back(*(iBegin2++)); //post increment
+	}
+
+	//copy the rest if iBegin1 finished first
+	while (iBegin1 != iEnd1) temp.push_back(*(iBegin1++));
+
+	//copy the rest if iBegin2 finished first
+	while (iBegin2 != iEnd2) temp.push_back(*(iBegin2++));
+
+	//copy back list temp to the original list that we are sorting
+	//in the position noted by head now, that's why we stored it
+
+	listIterator itTemp = temp.begin();
+	while (head != iEnd2)
+		*(head++) = *(itTemp++);
+}
+
+void readFile(list<int> &l, char fileName[]) throw (const char *)
+{
+	ifstream fin(fileName);
+	if (fin.fail())
+		throw "ERROR: File could not be opened!";
+
+	int number;
+	while (fin >> number)
+		l.push_back(number);
+
+	fin.close();
+}
+
+void print(const list<int> &l)
+{
+	int i = 0;
+	for (list<int>::const_iterator  it = l.begin(); it != l.end(); ++it, ++i)
+	{
+		if (i % 10 == 0)
+			cout << endl;
+		cout << setw(3) << *it;
+	}
+}
+
+/*************************************************************************
+* This function sorts a linked list using a Natural Merge Sort.
+* Input:  data -  linked list of data to be sorted.
+* Output: data -  sorted linked list
+**************************************************************************/
+template<class T>
+void mergeSort(list<T> &data)
+{
+	list<int>::iterator iBegin1 = l.begin();
+	list<int>::iterator iBegin2 = l.begin();
+	list<int>::iterator iEnd1 = l.end();
+	list<int>::iterator iEnd2 = l.end();
+	int numMerges = 0;
+
+	do
+	{
+		numMerges = 0;
+
+		while (iBegin1 != l.end())
+		{
+			numMerges++;
+			for (iEnd1 = next(iBegin1, 1); iEnd1 != l.end() && *prev(iEnd1, 1) <=
+				*iEnd1; ++iEnd1)
+				; //just move forward
+
+			iBegin2 = iEnd1;
+
+			for (iEnd2 = next(iBegin2, 1); iEnd2 != l.end() && *prev(iEnd2, 1) <=
+				*iEnd2; ++iEnd2)
+				; //just move forward
+
+			if (iBegin2 != l.end())
+			{
+				//merge those and copy back to the positions starting from iBegin1
+				merge(iBegin1, iEnd1, iBegin2, iEnd2);
+			}
+
+			iBegin1 = iEnd2;
+
+		}
+
+	} while (numMerges > 1);
+}

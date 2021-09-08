@@ -1,0 +1,105 @@
+/***********************************************************************
+* Program:
+*    Week 11, Sorting
+*    Brother Ercanbrack, CS 235
+*
+* Author:
+*   <Your Name>   
+* Summary: 
+*
+************************************************************************/
+#include <vector>
+#include <cassert>
+#include <fstreaam>
+
+using namespace std;
+
+template <class T>
+class Heap
+{
+public:
+	//CAREFUL the only way it works, by initialising it this way!
+	Heap(vector<T> &vInput);
+	void sort();
+
+private:
+	int n;
+	vector<T> &v;
+	void percolateDown(int index);
+};
+
+template <class T>
+Heap<T> ::Heap(vector<T> &vInput) : v(vInput)
+{
+	n = v.size();
+	for (int i = n / 2 - 1; i >= 0; --i)
+		percolateDown(i);
+}
+
+template <class T>
+void Heap<T>::percolateDown(int index)
+{
+	int indexLeft = 2 * index + 1;
+	int indexRight = 2 * index + 2;
+
+	if (indexRight < n
+		&& v[indexRight] > v[indexLeft]
+		&& v[indexRight] > v[index])
+	{
+		std::swap(v[index], v[indexRight]);
+		percolateDown(indexRight);
+	}
+	else if (indexLeft < n && v[indexLeft] > v[index])
+	{
+		std::swap(v[index], v[indexLeft]);
+		percolateDown(indexLeft);
+	}
+}
+
+template <class T>
+void  Heap<T>::sort()
+{
+	//n is not the index of the last element
+	assert(n > 0);
+	while (n > 1)
+	{
+		std::swap(v[0], v[n - 1]);
+		--n;
+		percolateDown(0);
+	}
+}
+
+void readFile(vector<int> &v, char fileName[]) throw (const char *)
+{
+	ifstream fin(fileName);
+	if (fin.fail())
+		throw "ERROR: File could not be opened!";
+
+	int number;
+	while (fin >> number)
+		v.push_back(number);
+
+	fin.close();
+}
+
+void print(const vector<int> &v)
+{
+	for (int i = 0;i < v.size(); ++i)
+	{
+		if (i % 10 == 0)
+			cout << endl;
+		cout << setw(3) << v[i];
+	}
+}
+
+/*************************************************************************
+* This function sorts a vector using a heap sort.
+* Input:  data -  Vector to be sorted.
+* Output: data -  Vector sorted
+**************************************************************************/
+template<class T>
+void heapSort(vector<T> &data)
+{
+	Heap<int> heap(data);
+	heap.sort();
+}

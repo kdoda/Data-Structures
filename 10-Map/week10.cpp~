@@ -1,0 +1,185 @@
+/***********************************************************************
+ * Program:
+ *    Week 10, MAP
+ *    Brother Ercanbrack, CS 235
+ * Author:
+ *    Klevin Doda
+ ************************************************************************/
+
+#include <queue>        //for priority_queue
+#include <utility>      //for pair
+#include <iostream>     //for cout
+#include <map>
+#include <string>
+#include <algorithm>    //for sort
+#include <fstream>
+#include <cctype>       //for isalpha
+#include <functional>   //for less
+#include <cassert>      //for paranoid programmers
+#include <iomanip>      //for setw
+
+using namespace std;
+
+typedef pair<int, string> pis; //pair int string
+
+const int BOGUS = -1;
+
+/***********************************
+ * GetFileName
+ * Get the file name form the user
+ ***********************************/
+string getFileName()
+{
+    string fileName;
+    cout << "Enter filename: ";
+    cin >> fileName;
+    return fileName;
+}
+
+/***********************************
+ * GetFileName
+ * Get the file name form the user
+ ***********************************/
+string convertWord(const string& s)
+{
+    string converted;
+    for(int i = 0;i < s.size();++i)
+    {
+        if(isalpha(s[i]) || s[i] == '-')
+            converted.push_back(tolower(s[i]));
+    }
+    return converted;
+}
+
+/***************************************************
+ * CountWords
+ * stret the frequency of the words in the map
+ ***************************************************/
+int countWords(map<string,int> & wordsFreq, const string &fileName)
+{
+    ifstream fin(fileName.c_str());
+    if(fin.fail())
+        return BOGUS;
+    
+    string word;
+    int wordsProcessed = 0;
+    while(fin >> word)
+    {
+        wordsFreq[convertWord(word)]++;
+        ++wordsProcessed;
+    }
+    
+    return wordsProcessed;
+}
+
+/***************************************************
+ * ComperatorWords
+ * Used to compare two words for the sorting
+ * in order to pass testBed
+ ***************************************************/
+static bool comperatorWords(const pair<int, string> & word1,
+                            const pair<int, string> & word2)
+{
+   if(word1.first == word2.first)
+      return word1.second < word2.second;
+   return word1.first > word2.first;
+
+}
+
+/***************************************************
+ * GetTopKWords
+ * Get top K words based on frequency
+ * Time Complexity O(K*N) where N size of map
+ * Since K = 100 in our case it's linear time
+ ***************************************************/
+vector<pis> getTopKWords(const map<string,int> & wordsFreq, int K)
+{
+    assert(K >= 0);
+    K = (wordsFreq.size() < K ? wordsFreq.size() : K);
+    vector<pis> words;
+    
+    //copy to words vector
+    for(map<string,int> :: const_iterator it = wordsFreq.begin(); it != wordsFreq.end(); ++it)
+        words.push_back(make_pair(it->second,it->first));
+    
+    //sort those based on freq then names to pass testbed
+    sort(words.begin(),words.end(),comperatorWords);
+    words.resize(K);
+    return words;
+}
+
+/***************************************************
+ * PrintTopKWordsFast
+ * Print top K words based on frequency
+ * Time Complexity O(K*N) where N size of map
+ * Since K = 100 in our case it's linear time
+ * NOTE:
+ * This method is not used for this programm
+ * but it's a faster approach then the above one
+ ***************************************************/
+void printTopKWordsFast(const map<string,int> & wordsFreq, int K, int wordsProcessed)
+{
+    assert(K >= 0);
+    K = (wordsFreq.size() < K ? wordsFreq.size() : K);
+    vector<pis> words;
+    
+    cout << endl << "Number of words processed: " << wordsProcessed
+    << endl << K << " most common words found and their frequencies:"
+    << endl;
+    
+    //copy to words vector
+    for(map<string,int> :: const_iterator it = wordsFreq.begin(); it != wordsFreq.end(); ++it)
+        words.push_back(make_pair(it->second,it->first));
+    
+    //construct the max_heap in O(n)
+    priority_queue<pis, vector<pis>, less<pis> > pq (words.begin(), words.end());
+    
+    //print K element from max_heap to words
+    for (int i = 0; i < K; ++i)
+    {
+        cout << setw(23) << pq.top().second << " - "
+             << pq.top().first << endl;
+        pq.pop();
+    }
+    
+}
+/***************************************************
+ * Print
+ * Print how many words were processed and those
+ * words on the screen.
+ ***************************************************/
+void print(vector<pis> & topKwords,int wordsProcessed)
+{
+    cout << endl << "Number of words processed: " << wordsProcessed
+    << endl << topKwords.size() << " most common words found and their frequencies:"
+    << endl;
+    
+    for(int i = 0;i < topKwords.size(); ++i)
+        cout << setw(23) << topKwords[i].second << " - "
+             << topKwords[i].first << endl;
+}
+
+/***************************************************
+ * MAIN
+ * Counts the words in files, and prints top 100
+ * words in the screen
+ ***************************************************/
+int main()
+{
+    const int TOP_WORDS = 100;
+    
+    string fileName = getFileName();
+    map<string,int> wordsFreq;
+    int wordsProcessed = countWords(wordsFreq,fileName);
+    
+    if(wordsProcessed == BOGUS)
+    {
+        cout << "Error - File Failed to Open";
+    }
+    else
+    {
+        vector<pis> topKwords = getTopKWords(wordsFreq, TOP_WORDS);
+        print(topKwords, wordsProcessed);
+    }
+    return 0;
+}

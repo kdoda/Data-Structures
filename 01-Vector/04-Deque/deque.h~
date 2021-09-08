@@ -1,0 +1,309 @@
+#ifndef DEQUE_H
+#define DEQUE_H
+
+#include <cassert>
+
+/*******************************************
+ * DEQUE
+ * A class representing the ADT deque
+ *******************************************/
+template <class T>
+class Deque
+{
+  public:
+    // default constructor : empty and kinda useless
+    Deque() : iFront(0), iBack(-1), numCapacity(0), data(NULL) {}
+    
+    // non-default constructor : pre-allocate
+    Deque(int numCapacity) throw (const char *);
+    
+    // copy constructor : copy it
+    Deque(const Deque & rhs) throw (const char *);
+    
+    // destructor : free everything
+    ~Deque() { delete[] data; }
+    
+    //assignment operator
+    Deque & operator = (const Deque & rhs) throw (const char *);
+    
+    // is the container currently empty
+    bool empty() const { return !size(); }
+    
+    // what is the capacity
+    int capacity() const { return numCapacity; }
+    
+    // remove all the items from the queue
+    void clear() { iFront = 0; iBack = -1; }
+    
+    // how many items are currently in the queue
+    int size() const { return iBack - iFront + 1; }
+    
+    // pop from the front
+    void pop() throw (const char *);
+    
+    // add an item to the end of the deque, reallocate if needed
+    void push_back(const T & t) throw (const char *);
+    
+    // add an item to the front of the deque, reallocate if needed
+    void push_front(const T & t) throw (const char *);
+    
+     // remove the item from the emd of the deque
+    void pop_back() throw (const char *);
+   
+     // remove the item from the front the deque,
+    void pop_front() throw (const char *);
+    
+    //get and set the front element
+    T& front() throw (const char *);
+    const T& Deque <T> :: front() const throw (const char *);
+    
+    //get and set the back element
+    T& back() throw (const char *);
+    const T& Deque <T> :: back() const throw (const char *);
+    
+private:
+    int iFront;     // how many pushs
+    int iBack;      // how many pops
+    int numCapacity;
+    T * data;      // dynamically allocated array of T
+    
+    void reallocate(int numCapacity) throw (const char *);
+    void setDefault(int = 0);
+    void copy(const Deque<T> & rhs) throw (const char *);
+    bool isFull() { return size() == capacity(); }
+    int iNormalize(int) const;
+    //can you give me the index of the front of the deque please?
+    int iFrontNormalize() const { return iNormalize(iFront); }
+    //can you give me the index of the back of the deque please?
+    int iBackNormalize() const { return iNormalize(iBack); }
+};
+
+/*******************************************
+ * DEQUE :: SET DEFAULT
+ * Helper function to reuse for less code
+ *******************************************/
+template <class T>
+void Deque<T> :: setDefault(int numCapacity)
+{
+    this->numCapacity = numCapacity;
+    clear();
+    data = NULL;
+}
+
+/*******************************************
+* DEQUE :: iNormalize
+* Helper function to find the index of array
+* for front back
+*******************************************/
+template <class T>
+int Deque<T> :: iNormalize(int i) const
+{
+   if(numCapacity == 0)
+      return i;
+   
+   int iNormalized = i % numCapacity;
+   return iNormalized < 0 ?
+        iNormalized + numCapacity :
+        iNormalized;
+}
+
+/*******************************************
+ * DEQUE :: NON_DEFAULT CONSTRUCTOR
+ *******************************************/
+template <class T>
+Deque<T> :: Deque(int numCapacity) throw (const char *)
+{
+    assert(numCapacity >= 0);
+    setDefault(numCapacity);
+    if (numCapacity == 0)
+        return;
+    
+    data = new (std::nothrow) T[numCapacity];
+    if(!data)
+        throw "ERROR: Unable to allocate a new buffer for deque";
+}
+
+/*******************************************
+ * DEQUE :: COPY CONSTRUCTOR
+ *******************************************/
+template <class T>
+Deque <T> :: Deque(const Deque <T> & rhs) throw (const char *)
+{
+    assert(rhs.numCapacity >= 0);
+    setDefault();
+    // do nothing if there is nothing to do
+    if (rhs.size() == 0)
+        return;
+    
+    copy(rhs);
+}
+
+/**********************************************
+ * DEQUE : ASSIGNMENT
+ **********************************************/
+template <class T>
+Deque<T> & Deque <T> :: operator = (const Deque<T> & rhs) throw (const char *)
+{
+    assert(rhs.capacity() >= 0);
+    if(this == &rhs) return *this;
+    // do nothing if there is nothing to do
+    if (rhs.size() == 0)
+    {
+        delete []data;
+        setDefault();
+        return *this;
+    }
+
+    clear();
+    copy(rhs);
+    return *this;
+}
+
+/**********************************************
+ * DEQUE : COPY the rest of the array
+ **********************************************/
+template <class T>
+void Deque <T> :: copy(const Deque<T> & rhs) throw (const char *)
+{
+    //this block code is useful for the = operator only
+   if(numCapacity < rhs.size()) //allocate a new one only if we need one
+       reallocate(rhs.size());
+    
+    // copy over and size
+    assert(rhs.size() >= 0 && rhs.size() <= rhs.capacity());
+    
+    // copy the items over one at a time using the assignment operator
+    for (int i = rhs.iFront; i <= rhs.iBack; ++i)
+       this->push_back(rhs.data[rhs.iNormalize(i)]);
+}
+
+/**********************************************
+ * DEQUE : REALLOCATE
+ * Reallocate to the new capacity
+ **********************************************/
+template <class T>
+void Deque <T> :: reallocate(int numCapacity) throw (const char *)
+{
+   int oldIFront = iFront;
+   int oldIBack = iBack;
+   clear();
+
+   T * newData = new (std::nothrow) T[numCapacity];
+   if (!newData)
+      throw "ERROR: Unable to allocate a new buffer for deque";
+
+   for (int i = oldIFront; i <= oldIBack; ++i)
+      newData[++iBack] = data[iNormalize(i)];
+
+   this->numCapacity = numCapacity;
+   delete[]data; //free memory
+   data = newData;
+}
+
+/**********************************************
+ * DEQUE : Push back
+ * Add to the push of the deque
+ **********************************************/
+template <class T>
+void Deque <T> :: push_back(const T & t) throw (const char *)
+{
+   if(isFull())
+      reallocate(numCapacity ? numCapacity * 2 : 1);
+   
+   iBack++;
+   data[iBackNormalize()] = t;
+}
+
+/**********************************************
+ * DEQUE : Push front
+ * Add to the front of the deque
+ **********************************************/
+template <class T>
+void Deque <T> :: push_front(const T & t) throw (const char *)
+{
+   if(isFull())
+      reallocate(numCapacity ? numCapacity * 2 : 1);
+   
+   iFront--;
+   data[iFrontNormalize()] = t;
+}
+
+/**********************************************
+ * DEQUE : Pop front
+ * Remove the front of the deque
+ **********************************************/
+template <class T>
+void Deque <T> :: pop_front() throw (const char *)
+{
+   if(empty())
+      throw "ERROR: unable to pop from the front of empty deque";
+   
+    iFront++;
+}
+
+/**********************************************
+ * DEQUE : Pop Back
+ * Remove the end of the deque
+ **********************************************/
+template <class T>
+void Deque <T> :: pop_back() throw (const char *)
+{
+    if(empty())
+        throw "ERROR: unable to pop from the back of empty deque";
+    
+    iBack--;
+}
+
+/**********************************************
+ * DEQUE : Front
+ * Get and set the front of the deque
+ **********************************************/
+template <class T>
+T& Deque <T> :: front() throw (const char *)
+{
+    if(empty())
+        throw "ERROR: unable to access data from an empty deque";
+    
+    return data[iFrontNormalize()];
+}
+
+/**********************************************
+ * DEQUE : Front Const
+ * Get and set the front of the deque
+ **********************************************/
+template <class T>
+const T& Deque <T> :: front() const throw (const char *)
+{
+    if(empty())
+        throw "ERROR: unable to access data from an empty deque";
+    
+    return data[iFrontNormalize()];
+}
+
+/**********************************************
+ * DEQUE : Back
+ * GEt and set the end of the deque
+ **********************************************/
+template <class T>
+T& Deque <T> :: back() throw (const char *)
+{
+    if(empty())
+        throw "ERROR: unable to access data from an empty deque";
+    
+    return data[iBackNormalize()]; 
+}
+
+/**********************************************
+ * DEQUE : Back Const
+ * GEt and set the end of the deque
+ **********************************************/
+template <class T>
+const T& Deque <T> :: back() const throw (const char *)
+{
+    if(empty())
+        throw "ERROR: unable to access data from an empty deque";
+    
+    return data[iBackNormalize()];
+}
+
+#endif

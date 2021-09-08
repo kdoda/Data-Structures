@@ -1,0 +1,407 @@
+/***********************************************************************
+ * Program:
+ *    Week 13, GENEALOGY
+ *    Brother Ercanbrack, CS 235
+ *
+ * Author:
+ * Klevin Doda
+ * Summary:
+ * Parsed the Gedcom file, stored them in a sorted LL, wrote them in a file
+ * and print the pedigree in the console
+ ************************************************************************/
+
+#include <string>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include "node.h"
+#include "vector.h"
+#include "queue.h"
+#include "person.h"
+
+using namespace std;
+
+bool isTokenWithDelimiter(const string& s, char delimiter);
+bool isToken(const string& s);
+bool isIndi(const string& s);
+bool isFam(const string& s);
+int parseId(const string& s);
+void writeIndividuals(string fileName,Node<Person> *pHead);
+Node<Person>* insertSorted(Node<Person>* newPerson, Node<Person> *pHead);
+void createPedgree(string fileName, Vector<Node<Person>*> &individuals);
+void printAncestors(Node<Person> * root);
+void resetParentPointers(Vector<Node<Person>*> &individuals);
+void readIndividuals(string fileName,
+                     Node<Person> *&pHead,
+                     Vector<Node<Person>*> &individuals);
+
+int main(int argc, const char* argv[])
+{
+    
+    string fileName;
+    
+    if (argc == 1)
+    {
+        cout << "Enter the GEDCOM file name: ";
+        cin >> fileName;
+    }else if (argc == 2)
+    {
+        fileName = string(argv[1]);
+    }
+    
+    //vector that stores the pointers to individuals nodes
+    //where the index is the individuals id
+    //reallocate every time the id is out of bound
+    //unordered_map would be way cleaner, but I didn't have enough time to implement one
+    Vector<Node<Person>*> individuals;
+    
+    Node<Person> *pHead = NULL;
+    readIndividuals(fileName, pHead, individuals);
+    writeIndividuals("sorted.dat",pHead);
+    resetParentPointers(individuals);
+    createPedgree(fileName,individuals);
+    
+    printAncestors(individuals[1]);
+    
+    return 0;
+}
+
+/**********************************************************
+ * Is Token With Delimiter
+ * E.g. @d..@
+ **********************************************************/
+bool isTokenWithDelimiter(const string& s, char d)
+{
+    return isToken(s) && s[1] == d;
+}
+
+/**********************************************************
+ * Is Token
+ * Is the string in the format that represent a special
+ * meaning in the Gedcom file
+ * E.g. @...@
+ **********************************************************/
+bool isToken(const string& s)
+{
+    return s.size() > 3 && s.front() == '@' && s.back() == '@';
+}
+
+/**********************************************************
+ * Is Indi
+ * E.g. @I13@
+ **********************************************************/
+bool isIndi(const string& s)
+{
+    return isTokenWithDelimiter(s, 'I');
+}
+
+/**********************************************************
+ * Is Fam
+ * E.g. @F13@
+ **********************************************************/
+bool isFam(const string& s)
+{
+    return isTokenWithDelimiter(s, 'F');
+}
+
+/**********************************************************
+ * Parse Id
+ * Parse the id from the string
+ * E.g. @I145@ => 145
+ **********************************************************/
+int parseId(const string& s)
+{
+    return stoi(s.substr(2, s.size() - 3));
+}
+
+/**********************************************************
+ * Ancestors Header
+ * Return the header of the ancestors based on the level
+ * passed from printAncestors
+ **********************************************************/
+string ancestorsHeader(int level)
+{
+    switch(level)
+    {
+        case 1:
+            return "Parents";
+        case 2:
+            return "Grandparents";
+        case 3:
+            return "Great Grandparents";
+        case 4:
+            return "2nd Great Grandparents";
+        case 5:
+            return "3rd Great Grandparents";
+        default: //six and above
+            return to_string(level - 2) + "th Great Grandparents";
+    }
+}
+
+/**********************************************************
+ * Print Ancestors
+ * level order traversal to print each generation
+ **********************************************************/
+void printAncestors(Node<Person> * root)
+{
+    if(root == NULL)
+        return;
+    
+    Queue<Node<Person>*> q;
+    
+    cout << "The Ancestors of " << root->data.getFullName() << ":" << endl;
+    if(root->pLeft)
+        q.push(root->pLeft);
+    if(root->pRight)
+        q.push(root->pRight);
+    
+    int level = 1;
+    
+    while(!q.empty())
+    {
+        cout << ancestorsHeader(level) << ":" << endl;
+        int size = q.size();
+        while(size > 0)
+        {
+            Node<Person>* person = q.front();
+            cout.width(48);
+
+            //For some reason Thomas Duncan is not left aligned as other individuals but is shifted two spaces left.
+            
+               //if(person->data.givenName == "Thomas Duncan Sedgwick")
+               // cout << "      ";
+               //else
+               //cout << "        ";
+            
+            cout << "        " << person->data << endl;
+            q.pop();
+            
+            if(person->pLeft)
+                q.push(person->pLeft);
+            if(person->pRight)
+                q.push(person->pRight);
+            
+            size--;
+        }
+        level++;
+    }
+}
+
+/**********************************************************
+ * Resent pointers of each node, so we when we do
+ * level order traversal we know which nodes are children
+ **********************************************************/
+void resetParentPointers(Vector<Node<Person>*> &individuals)
+{
+    //set the links of each node to null
+    for(int i = 0; i < individuals.capacity(); ++i)
+    {
+        if(individuals[i] != NULL)
+        {
+            individuals[i]->pLeft = individuals[i]->pRight = NULL;
+        }
+    }
+}
+
+/***********************************************
+ * READ INDIVIDUALS
+ * Read individuals of the file into the LL
+ * and Individuals table
+ **********************************************/
+void readIndividuals(string fileName,
+                     Node<Person> *&pHead,
+                     Vector<Node<Person>*> &individuals)
+{
+    ifstream fin(fileName.c_str());
+    
+    string word;
+    string line;
+    stringstream ss;
+    
+    //skip to the first INDI
+    while (fin >> word && !isIndi(word))
+        ; //keep moving forward in the file
+    
+    getline(fin, line); //skip this last line were Indi is located
+    
+    //parse all the lines left
+    while (!fin.eof())
+    {
+        //parse until the next indi of family
+        if (isIndi(word))
+        {
+            Person person;
+            person.id = parseId(word);
+            bool isBirt = false;
+            while (getline(fin, line))
+            {
+                ss.clear();
+                ss.str(line);
+                ss >> word >> word; //skip the first number
+                ss >> std::ws; //skip the first white space
+                if (isToken(word)) //parse the indi or family
+                {
+                    break;
+                }
+                else if (word == "GIVN")
+                {
+                    //get the rest(the givenName)
+                    getline(ss, person.givenName);
+                }
+                else if (word == "SURN")
+                {
+                    //get the rest(the surname)
+                    getline(ss, person.surname);
+                }
+                else if (word == "BIRT")
+                {
+                    isBirt = true;
+                }
+                else if (isBirt)
+                {
+                    //date should be the very first line after BIRT
+                    isBirt = false;
+                    if(word == "DATE")
+                        getline(ss, person.birthdate); //get the rest of the date
+                }
+                
+            }
+            
+            assert(person.id != 0);
+            
+            //TODO implement a resize
+            Node<Person>* pNodePerson = new Node<Person>(person);
+            if(person.id >= individuals.capacity())
+            {
+                individuals.reallocate(person.id == 0 ? 1 : person.id * 2);
+            }
+            
+            individuals[person.id] = pNodePerson;
+            pHead = insertSorted(pNodePerson, pHead);
+        }
+        else
+        {
+            return;
+        }
+    }
+    
+}
+
+/*********************************************************************
+ * Create the pedigre tree using the information of the families
+ * from the file, and the already populated individuals
+ ********************************************************************/
+void createPedgree(string fileName, Vector<Node<Person>*> &individuals)
+{
+    ifstream fin(fileName.c_str());
+    
+    string word;
+    string line;
+    stringstream ss;
+    
+    //skip to the first FAM
+    while (getline(fin, line))
+    {
+        ss.clear();
+        ss.str(line);
+        ss >> word >> word;
+        if(isFam(word))
+            break;
+    }
+    
+    getline(fin, line); //skip this last line were FAM is located
+    
+    //parse all the lines left
+    while (!fin.eof())
+    {
+        //parse until the next indi of family
+        if (isFam(word))
+        {
+            //father,mother,child can miss from the family
+            int fatherId = -1; //to check if family has a HUSB
+            int motherId = -1; //to check if family has a WIFE
+            int childId  = -1; //to check if family has a CHILD
+            
+            while (getline(fin, line))
+            {
+                ss.clear();
+                ss.str(line);
+                ss >> word >> word; //skip the first number
+                ss >> std::ws; //skip the first white space
+                if (isToken(word))
+                {
+                    break;
+                }
+                else if (word == "HUSB")
+                {
+                    ss >> word;
+                    fatherId = parseId(word);
+                }
+                else if (word == "WIFE")
+                {
+                    ss >> word;
+                    motherId = parseId(word);
+                }
+                else if (word == "CHIL")
+                {
+                    ss >> word;
+                    childId = parseId(word);
+                }
+            }
+            
+            if(childId != -1)
+            {
+                individuals[childId]->pLeft  = (fatherId != -1 ? individuals[fatherId] : NULL);
+                individuals[childId]->pRight = (motherId != -1 ? individuals[motherId] : NULL);
+            }
+        }
+        else
+        {
+            return;
+        }
+    }
+}
+
+/***********************************************
+ * WRITE INDIVIDUALS
+ * Write individuals of the LL to the file
+ **********************************************/
+void writeIndividuals(string fileName,Node<Person> *pHead)
+{
+    ofstream fout(fileName.c_str());
+    while(pHead)
+    {
+        fout << pHead->data << "\n";
+        pHead = pHead->pRight;
+    }
+}
+
+/***********************************************
+ * INSERT SORTED
+ * Insert the value in the right pos in the LL
+ **********************************************/
+Node<Person>* insertSorted(Node<Person>* newPerson, Node<Person> *pHead)
+{
+    if(!pHead) //emtpy
+        return newPerson;
+    
+    if(newPerson->data < pHead->data) //insert in the first position
+    {
+        newPerson->pRight = pHead;
+        return newPerson;
+    }
+    
+    Node<Person> *prevCrawl = pHead;
+    Node<Person> *pCrawl = pHead->pRight;
+    
+    while(pCrawl && pCrawl->data < newPerson->data) //check this
+    {
+        prevCrawl = pCrawl;
+        pCrawl = prevCrawl->pRight;
+    }
+    
+    newPerson->pRight = prevCrawl->pRight;
+    prevCrawl->pRight = newPerson;
+    return pHead;
+}

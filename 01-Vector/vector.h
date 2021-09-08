@@ -1,0 +1,311 @@
+#ifndef VECTOR_H
+#define VECTOR_H
+
+#include <cassert>
+
+// forward declaration for ContainerIterator
+template <class T>
+class VectorIterator;
+
+/************************************************
+ * VECTOR
+ * A class that holds stuff
+ ***********************************************/
+template <class T>
+class Vector
+{
+  public:
+   // default constructor : empty and kinda useless
+   Vector() : numItems(0), cap(0), data(NULL) {}
+   
+   // copy constructor : copy it
+   Vector(const Vector & rhs) throw (const char *);
+   
+   // non-default constructor : pre-allocate
+   Vector(int cap) throw (const char *);
+   
+   // destructor : free everything
+   ~Vector() { if (cap) delete[] data; }
+   
+   // assignment operator
+   Vector & operator = (const Vector & rhs) throw (const char *);
+   
+   // is the container currently empty
+   bool empty() const { return numItems == 0; }
+   
+   // what is the capacity
+   int capacity() const { return this->cap; }
+    
+   // remove all the items from the container
+   void clear() { numItems = 0; }
+   
+   // how many items are currently in the container?
+   int size() const { return numItems; }
+    
+   // add an item to the container
+   void insert(const T & t) throw (const char *);
+   
+   // add an item to the vector, reallocate if needed
+   void push_back(const T & t) throw (const char *);
+   
+   T & operator [](int index) throw (const char *);
+   const T & operator [](int index) const throw (const char *);
+    
+   // return an iterator to the beginning of the list
+   VectorIterator <T> begin() { return VectorIterator<T>(data); }
+    
+   // return an iterator to the end of the list
+   VectorIterator <T> end() { return VectorIterator<T>(data + numItems); }
+
+  private:
+   int numItems;          // how many items are currently in the Container?
+   int cap;               // how many items can I put on the Container before full?
+   T * data;              // dynamically allocated array of T
+   void reallocate(int newCap) throw (const char *);
+};
+
+/**************************************************
+ * VECTOR ITERATOR
+ * An iterator through VECTOR
+ *************************************************/
+template <class T>
+class VectorIterator
+{
+  public:
+   // default constructor
+   VectorIterator() : p(NULL) {}
+
+   // copy constructor
+   VectorIterator(const VectorIterator& rhs) { this->p = rhs.p; }
+
+   // initialize to direct p to some item
+   VectorIterator(T * p) : p(p) {}
+
+   // equal operator       
+   bool operator == (const VectorIterator & rhs) const
+   {
+      return rhs.p == this->p;
+   }
+
+   // assignment operator
+   VectorIterator<T> & operator = (const VectorIterator & rhs)
+   {
+      this->p = rhs.p;
+      return *this;
+   }
+
+   // not equals operator
+   bool operator != (const VectorIterator & rhs) const
+   {
+      return rhs.p != this->p;
+   }
+
+   // dereference operator
+   T & operator * ()
+   {
+      return *p;
+   }
+
+   // prefix increment
+   VectorIterator <T> & operator ++ ()
+   {
+      p++;
+      return *this;
+   }
+
+   // postfix increment
+   VectorIterator <T> operator++(int postfix)
+   {
+      VectorIterator tmp(*this);
+      p++;
+      return tmp;
+   }
+   
+  private:
+   T * p;
+};
+
+/*******************************************
+ * VECTOR :: COPY CONSTRUCTOR
+ *******************************************/
+template <class T>
+Vector <T> :: Vector(const Vector <T> & rhs) throw (const char *)
+{
+    assert(rhs.cap >= 0);
+    // do nothing if there is nothing to do
+    if (rhs.cap == 0)
+    {
+        cap = 0;
+        numItems = 0;
+        data = NULL;
+        return;
+    }
+    // attempt to allocate
+    try
+    {
+        data = new T[rhs.cap];
+    }
+    catch (std::bad_alloc)
+    {
+        throw "ERROR: Unable to allocate buffer";
+    }
+    // copy over the capacity and size
+    assert(rhs.numItems >= 0 && rhs.numItems <= rhs.cap);
+    cap = rhs.cap;
+    numItems = rhs.numItems;
+    // copy the items over one at a time using the assignment operator
+    for (int i = 0; i < numItems; ++i)
+        data[i] = rhs.data[i];
+        
+    // the rest needs to be filled with the default value for T
+    for (int i = numItems; i < cap; ++i)
+       data[i] = T();
+}
+
+/*******************************************
+ * VECTOR :: ASSIGNMENT
+ *******************************************/
+template <class T>
+Vector<T> & Vector <T> :: operator = (const Vector<T> & rhs) throw (const char *)
+{
+    assert(rhs.cap >= 0);
+    if(this == &rhs) return *this;
+
+    delete []data;
+    // do nothing if there is nothing to do
+    if (rhs.cap == 0)
+    {
+        cap = 0;
+        numItems = 0;
+        data = NULL;
+        return *this;
+    }
+
+    // attempt to allocate
+    data = new (std::nothrow) T[rhs.cap];
+    if (!data)
+        throw "ERROR: Unable to allocate a new buffer for Vector";
+    
+    // copy over the capacity and size
+    assert(rhs.numItems >= 0 && rhs.numItems <= rhs.cap);
+    cap = rhs.cap;
+    numItems = rhs.numItems;
+    
+    // copy the items over one at a time using the assignment operator
+    for (int i = 0; i < numItems; ++i)
+        data[i] = rhs.data[i];
+        
+    // the rest needs to be filled with the default value for T
+    for (int i = numItems; i < cap; ++i)
+       data[i] = T();
+    
+    return *this;
+}
+
+/**********************************************
+ * VECTOR : NON-DEFAULT CONSTRUCTOR
+ * Preallocate the container to "capacity"
+ **********************************************/
+template <class T>
+Vector <T> ::Vector(int cap) throw (const char *)
+{
+    assert(cap >= 0);
+    // do nothing if there is nothing to do
+    if (cap == 0)
+    {
+        this->cap = this->numItems = 0;
+        this->data = NULL;
+        return;
+    }
+    // attempt to allocate
+    try
+    {
+        data = new T[cap];
+    }
+    catch (std::bad_alloc)
+    {
+        throw "ERROR: Unable to allocate buffer";
+    }
+    // copy over the stuff
+    this->cap = cap;
+    this->numItems = 0;
+    // initialize the container by calling the default constructor
+    for (int i = 0; i < cap; i++)
+        data[i] = T();
+}
+
+/***************************************************
+ * VECTOR :: INSERT
+ * Insert an item on the end of the container
+ **************************************************/
+template <class T>
+void Vector <T> ::insert(const T & t) throw (const char *)
+{
+    // do we have space?
+    if (cap == 0 || cap == numItems)
+        throw "ERROR: Insufficient space";
+    // add an item to the end
+    data[numItems++] = t;
+}
+
+/***************************************************
+ * VECTOR :: REALLOCATE
+ * reallocate to the new capacity
+ **************************************************/
+template <class T>
+void Vector <T> ::reallocate(int newCap) throw (const char *)
+{
+    cap = newCap; 
+    T * newData = new (std::nothrow) T[cap];
+    if (!newData)
+        throw "ERROR: Unable to allocate a new buffer for Vector";
+    
+    for (int i = 0; i < numItems; ++i)
+       newData[i] = data[i];
+    for (int i = numItems; i < cap; ++i)
+       newData[i] = T(); //default value the rest
+    
+    delete[] data; //free memory
+    data = newData;
+}
+
+/***************************************************
+ * VECTOR :: INSERT
+ * Insert an item on the end of the container
+ **************************************************/
+template <class T>
+void Vector <T> ::push_back(const T & t) throw (const char *)
+{
+    if (numItems == cap)
+       reallocate(cap ? 2 * cap : 1);
+
+    // add an item to the end
+    data[numItems++] = t;
+}
+
+/***************************************************
+ * VECTOR :: operator []
+ * Returns the object by reference at the specifix index
+ **************************************************/
+template <class T>
+T & Vector <T> :: operator [](int index) throw (const char *)
+{
+   if (numItems <= index || index < 0)
+      throw "ERROR: Invalid index";
+   return data[index];
+}
+
+/***************************************************
+ * VECTOR :: operator []
+ * Returns the object by const reference at the specifix index
+ **************************************************/
+template <class T>
+const T & Vector <T> :: operator [](int index) const throw (const char *)
+{
+   if (this->numItems <= index || index < 0)
+      throw "ERROR: Invalid index";
+   return data[index];
+}
+#endif
+
+

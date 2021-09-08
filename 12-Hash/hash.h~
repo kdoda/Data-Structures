@@ -1,0 +1,120 @@
+//
+// Created by Klevin Doda on 11/9/18.
+//
+
+#ifndef HASH_H
+#define HASH_H
+
+#include <list>
+#include <vector>
+#include <cassert>
+
+template <class T>
+class Hash
+{
+public:
+    Hash() : numItems(0) { }
+    Hash(int numBuckets) throw (const char *);
+    Hash(const Hash & rhs) throw (const char *);
+    ~Hash() {  }
+    Hash & operator = (const Hash & rhs) throw (const char *);
+
+    int capacity() const { return table.size(); }
+    int size() const { return numItems; }
+    bool empty() const { return numItems == 0; }
+    bool find(const T &t);
+    void insert(const T &t);
+    virtual unsigned int hash(const T &t) const = 0;
+private:
+    std::vector<std::list<T>> table;
+    int numItems;
+
+    bool exist(std::list<T> & l, const T &t);
+};
+
+template <class T>
+Hash<T> :: Hash(int numBuckets) throw (const char *)
+{
+    assert(numBuckets >= 0);
+    this->numItems = 0;
+    if (numBuckets == 0)
+        return;
+
+    try
+    {
+        table.resize(numBuckets);
+    }
+    catch (std::bad_alloc)
+    {
+        throw "ERROR: Unable to allocate memory for the hash.";
+    }
+}
+
+template <class T>
+Hash<T> :: Hash(const Hash & rhs) throw (const char *)
+{
+    if(rhs.capacity() == 0)
+        return;
+
+    this->numItems = rhs.size();
+
+    try
+    {
+        this->table = rhs.table;
+    }
+    catch (std::bad_alloc)
+    {
+        throw "ERROR: Unable to allocate memory for the hash.";
+    }
+}
+
+template <class T>
+Hash<T> & Hash<T> :: operator = (const Hash<T> & rhs) throw (const char *)
+{
+    if (this == &rhs)
+        return *this;
+
+    this->numItems = rhs.size();
+    this->table = rhs.table;
+    return *this;
+}
+
+template <typename T>
+bool Hash<T> :: exist(std::list<T> &l, const T &t)
+{
+    for(typename std::list<T>::iterator it = l.begin();
+        it != l.end();
+        ++it)
+    {
+        if (*it == t)
+            return true;
+    }
+
+    return false;
+}
+
+template <class T>
+bool Hash<T> :: find(const T &t)
+{
+    int index = hash(t);
+    return exist(table[index], t);
+}
+
+template <class T>
+void Hash<T> :: insert(const T &t)
+{
+    if(numItems * 1.5 > capacity())
+        table.resize(capacity() * 1.5);
+
+    int index = hash(t);
+    if(!exist(table[index],t))
+    {
+        table[index].push_back(t);  //O(1)
+        numItems++;
+    }
+
+}
+
+#endif //HASH_H
+
+

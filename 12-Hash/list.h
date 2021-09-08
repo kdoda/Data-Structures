@@ -1,0 +1,196 @@
+#ifndef LIST_H
+#define LIST_H
+
+#include <stdio.h>
+#include <iostream>
+#include <cassert>
+
+/************************************************
+ * NODE
+ * A class that represents a node of L-List
+ ***********************************************/
+template <class T>
+class Node
+{
+
+public:
+    Node() : pNext(NULL) { }
+    Node(T data) : data(data), pNext(NULL)  { }
+    Node(T data, Node* pNext)
+            : data(data), pNext(pNext) { }
+
+    T data;
+    Node* pNext;
+};
+
+/************************************************
+ * LIST
+ * A class that represents Linked List ADT
+ ***********************************************/
+template <class T>
+class List
+{
+public:
+    // default constructor : empty and kinda useless
+    List() { setDefault(); };
+
+    // copy constructor : copy it
+    List(const List& rhs) throw (const char *);
+
+    //destructor
+    ~List() { clear(); }
+
+    // assignment operator
+    List& operator = (const List& rhs) throw (const char *);
+
+    // is the set currently empty
+    bool empty() const { return numItems == 0; }
+
+    // what is the capacity
+    int size() const { return numItems; }
+
+    // remove all the items from the set
+    void clear();
+
+    // add to the end
+    void push_back(const T &t)  throw (const char *);
+
+    //add the the front
+    void push_front(const T &t) throw (const char *);
+
+    //does the list contain t
+    bool contains(const T &t);
+
+private:
+    Node<T>* pHead;        // pointer to the first node
+    Node<T>* pTail;        // pointer to the last node
+    int numItems;          // home many nodes are in the DLL
+
+    void setDefault();
+};
+
+/**********************************************
+ * SET : SET DEFAULT
+ * Set data to default values
+ **********************************************/
+template <class T>
+void List <T> :: setDefault()
+{
+    numItems = 0;
+    pHead = pTail = NULL;
+}
+
+/**********************************************
+ * SET : SET DEFAULT
+ * Set data to default values
+ **********************************************/
+template <class T>
+List <T> :: List(const List <T> &rhs) throw (const char *)
+{
+    setDefault();
+    for(Node<T> *p = rhs.pHead; p ; p = p->pNext)
+        this->push_back(p->data);
+}
+
+/**********************************************
+ * Assignment operator efficient
+ **********************************************/
+template <class T>
+List<T>& List <T> :: operator = (const List<T> & rhs) throw (const char *)
+{
+    if (this == &rhs)
+        return *this;
+
+    Node<T>* thisP = pHead;
+    Node<T>* prevThisP = pHead;
+    Node<T>* rhsP  = rhs.pHead;
+
+    while(thisP && rhsP)
+    {
+        thisP->data = rhsP->data;
+        prevThisP = thisP;
+        thisP = thisP->pNext;
+        rhsP  = rhsP->pNext;
+    }
+    //two cases, this is long than rhs, or otherwise
+
+    //set the next of the last node to NULL, and move the tail
+    if(prevThisP)
+    {
+        prevThisP->pNext = NULL;
+        pTail = prevThisP;
+    }
+
+    //in case we are going to delete the rest tail is right where we want
+    //in case we are going to add push_back moves the tail
+
+    //we must take care of the case when this is longer first to avoid memory leaks
+    while(thisP)
+    {
+        Node<T> *thisPNext = thisP->pNext;
+        delete thisP;
+        thisP = thisPNext;
+    }
+
+    while(rhsP)
+    {
+        this->push_back(rhsP->data);
+        rhsP = rhsP->pNext;
+    }
+
+    return *this;
+}
+
+/**********************************************
+ * Destructor
+ * Delete allocated nodes, except the dummy one
+ **********************************************/
+template <class T>
+void List <T> ::  clear()
+{
+    Node<T> *pCrawl = pHead;
+    while(pCrawl)
+    {
+        Node<T> *pCrawlNext = pCrawl->pNext;
+        delete pCrawl;
+        pCrawl = pCrawlNext;
+    }
+    setDefault();
+}
+
+/**********************************************
+ * Push back
+ * Add to the end of the DLL
+ **********************************************/
+template <class T>
+void List <T> :: push_back(const T &t) throw (const char *)
+{
+    Node<T> *newNode = new (std::nothrow)Node<T>(t);
+    if(!newNode)
+        throw "ERROR: unable to allocate a new node for a list";
+
+    pTail = (pHead ? pTail->pNext : pHead) = newNode;
+    numItems++;
+}
+
+
+/**********************************************
+ * CONTAINS
+ * Is t inside the LList?
+ **********************************************/
+template <class T>
+bool List <T> :: contains(const T &t)
+{
+    Node<T> *pCrawl = pHead;
+    while(pCrawl)
+    {
+        if(pCrawl->data == t)
+            return true;
+
+        pCrawl = pCrawl->pNext;
+    }
+    return false;
+}
+
+#endif /* LIST_H */
+
